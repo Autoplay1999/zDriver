@@ -13,7 +13,6 @@
 #include <ntifs.h>
 #include <intrin.h>
 
-
 #include <ntdef.h>
 #include <ntifs.h>
 #include <ntifs.h>
@@ -28,10 +27,17 @@
 
 #include "Utils.h"
 
-
 DRIVER_INITIALIZE DriverInitialize;
 extern "C" DRIVER_INITIALIZE DriverEntry;
-#pragma alloc_text(INIT, DriverEntry)
+extern "C" NTSTATUS PsSuspendProcess(PEPROCESS Process);
+extern "C" NTSTATUS PsResumeProcess(PEPROCESS Process);
 
+#define TRACE(fmt, ...)	DbgPrintEx( DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "[ZDriver.Driver] " fmt "\n", __VA_ARGS__ )
+#define TRACE_BEGIN(name) TRACE("[ " name " ]")
+#define TRACE_END() TRACE("[ END ]")
 
-#define Printf(...) DbgPrintEx( DPFLTR_SYSTEM_ID, DPFLTR_ERROR_LEVEL, "[zDriver] " __VA_ARGS__ )
+#define BLOCK_BEGIN() while (true) {
+#define BLOCK_BEGIN_(x) while (x) {
+#define BLOCK_END() break;}
+#define BLOCK_EXIT() break
+#define BLOCK_NEXT() continue

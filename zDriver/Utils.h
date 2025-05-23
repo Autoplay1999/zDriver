@@ -184,13 +184,21 @@ typedef struct _RTL_PROCESS_MODULES
 	RTL_PROCESS_MODULE_INFORMATION Modules[ 1 ];
 } RTL_PROCESS_MODULES, *PRTL_PROCESS_MODULES;
 
+typedef struct _MM_UNLOADED_DRIVER {
+	UNICODE_STRING 	Name;
+	PVOID 			ModuleStart;
+	PVOID 			ModuleEnd;
+	ULONG64 		UnloadTime;
+} MM_UNLOADED_DRIVER, * PMM_UNLOADED_DRIVER;
+
 extern "C" NTSYSAPI NTSTATUS NTAPI ObReferenceObjectByName( PUNICODE_STRING ObjectPath, ULONG Attributes, PACCESS_STATE PassedAccessState, ACCESS_MASK DesiredAccess, POBJECT_TYPE ObjectType, KPROCESSOR_MODE AccessMode, PVOID ParseContext, PVOID * ObjectPtr );
 extern "C" POBJECT_TYPE * IoDriverObjectType;
 extern "C" NTSYSAPI NTSTATUS NTAPI ZwQueryInformationThread( HANDLE ThreadHandle, THREADINFOCLASS ThreadInformationClass, PVOID ThreadInformation, ULONG ThreadInformationLength, PULONG ReturnLength );
 extern "C" NTSTATUS WINAPI ZwQuerySystemInformation( SYSTEM_INFORMATION_CLASS SystemInformationClass, PVOID SystemInformation, ULONG SystemInformationLength, PULONG ReturnLength );
 
+LONG RetrieveMmUnloadedDriversData();
 BOOLEAN bDataCompare( const BYTE* pData, const BYTE* bMask, const char* szMask );
 PVOID ResolveRelativeAddress( PVOID Instruction, ULONG OffsetOffset, ULONG InstructionSize );
 PVOID NTAPI GetKernelProcAddress( LPCWSTR SystemRoutineName );
-UINT64 FindPattern( UINT64 dwAddress, UINT64 dwLen, BYTE *bMask, char * szMask );
+UINT64 FindPattern( UINT64 dwAddress, UINT64 dwLen, BYTE *bMask, const char * szMask );
 ULONG64 GeModuleBase(const char* Findmodule);
