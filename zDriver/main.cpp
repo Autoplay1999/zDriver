@@ -250,11 +250,16 @@ NTSTATUS DriverEntry(_In_  struct _DRIVER_OBJECT* DriverObject, _In_  PUNICODE_S
         //uintptr_t TraceMessageHookInst = FindPatternInKernelSection(".TEXT", (uintptr_t)ACPIDriverObject->DriverStart, (BYTE*)"\x48\x8D\x45\x4F\x4C\x89\x00\x24\x28\x48\x89\x00\x24\x20", "xxxxxx?xxxx?xx"); // 48 8D 45 4F 4C 89 ?? 24 28 48 89 ?? 24 20
         uintptr_t TraceMessageHookInst = FindPatternInKernelSection(".TEXT", (uintptr_t)ACPIDriverObject->DriverStart, (BYTE*)"\x48\x8B\x05\x00\x00\x00\x00\xFF\x15\x00\x00\x00\x00\x41\xB9\x05\x00\x00\x00", "xxx????xx????xxxxxx"); // 48 8B 05 ?? ?? ?? ?? FF 15 ?? ?? ?? ?? 41 B9 05 00 00 00
 
+        if (!TraceMessageHookInst) {
+            TraceMessageHookInst = FindPatternInKernelSection(".TEXT", (uintptr_t)ACPIDriverObject->DriverStart, (BYTE*)"\x48\x8B\x05\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x90\x41\xB9\x05\x00\x00\x00", "xxx????x????xxxxxxx"); // 48 8B 05 ?? ?? ?? ?? E8 ?? ?? ?? ?? 90 41 B9 05 00 00 00
+        }
+
         if (TraceMessageHookInst) {
             //TraceMessageHookInst += 0xE;
             uintptr_t pfnWppTraceMessagePtr = (uintptr_t)ResolveRelativeAddress((PVOID)TraceMessageHookInst, 3, 7);
 
             if (pfnWppTraceMessagePtr) {
+                TRACE("pfnWppTraceMessagePtr: %p", pfnWppTraceMessagePtr);
                 *(uintptr_t*)(pfnWppTraceMessagePtr) = DispatchHookAddr;
                 ACPIDriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = (PDRIVER_DISPATCH)TraceMessageHookInst;
             }
