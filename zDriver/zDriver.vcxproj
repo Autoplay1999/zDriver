@@ -59,6 +59,7 @@
       <SDLCheck>false</SDLCheck>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <LanguageStandard_C>stdclatest</LanguageStandard_C>
+      <PreprocessorDefinitions>__DEBUG;_WIN64;_AMD64_;AMD64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <LargeAddressAware>true</LargeAddressAware>
@@ -81,6 +82,7 @@
     <ClCompile Include="Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ldisasm.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="zdrv.hpp" />

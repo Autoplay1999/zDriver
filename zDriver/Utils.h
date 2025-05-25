@@ -1,7 +1,6 @@
 #pragma once
 
-typedef enum _SYSTEM_INFORMATION_CLASS
-{
+typedef enum _SYSTEM_INFORMATION_CLASS {
 	SystemBasicInformation = 0x0,
 	SystemProcessorInformation = 0x1,
 	SystemPerformanceInformation = 0x2,
@@ -164,8 +163,7 @@ typedef enum _SYSTEM_INFORMATION_CLASS
 typedef unsigned long long QWORD;
 typedef unsigned short WORD;
 
-typedef struct _RTL_PROCESS_MODULE_INFORMATION
-{
+typedef struct _RTL_PROCESS_MODULE_INFORMATION {
 	HANDLE Section;
 	PVOID MappedBase;
 	PVOID ImageBase;
@@ -175,14 +173,13 @@ typedef struct _RTL_PROCESS_MODULE_INFORMATION
 	USHORT InitOrderIndex;
 	USHORT LoadCount;
 	USHORT OffsetToFileName;
-	UCHAR  FullPathName[ 256 ];
-} RTL_PROCESS_MODULE_INFORMATION, *PRTL_PROCESS_MODULE_INFORMATION;
+	UCHAR  FullPathName[256];
+} RTL_PROCESS_MODULE_INFORMATION, * PRTL_PROCESS_MODULE_INFORMATION;
 
-typedef struct _RTL_PROCESS_MODULES
-{
+typedef struct _RTL_PROCESS_MODULES {
 	ULONG NumberOfModules;
-	RTL_PROCESS_MODULE_INFORMATION Modules[ 1 ];
-} RTL_PROCESS_MODULES, *PRTL_PROCESS_MODULES;
+	RTL_PROCESS_MODULE_INFORMATION Modules[1];
+} RTL_PROCESS_MODULES, * PRTL_PROCESS_MODULES;
 
 typedef struct _MM_UNLOADED_DRIVER {
 	UNICODE_STRING 	Name;
@@ -191,14 +188,31 @@ typedef struct _MM_UNLOADED_DRIVER {
 	ULONG64 		UnloadTime;
 } MM_UNLOADED_DRIVER, * PMM_UNLOADED_DRIVER;
 
-extern "C" NTSYSAPI NTSTATUS NTAPI ObReferenceObjectByName( PUNICODE_STRING ObjectPath, ULONG Attributes, PACCESS_STATE PassedAccessState, ACCESS_MASK DesiredAccess, POBJECT_TYPE ObjectType, KPROCESSOR_MODE AccessMode, PVOID ParseContext, PVOID * ObjectPtr );
-extern "C" POBJECT_TYPE * IoDriverObjectType;
-extern "C" NTSYSAPI NTSTATUS NTAPI ZwQueryInformationThread( HANDLE ThreadHandle, THREADINFOCLASS ThreadInformationClass, PVOID ThreadInformation, ULONG ThreadInformationLength, PULONG ReturnLength );
-extern "C" NTSTATUS WINAPI ZwQuerySystemInformation( SYSTEM_INFORMATION_CLASS SystemInformationClass, PVOID SystemInformation, ULONG SystemInformationLength, PULONG ReturnLength );
+typedef struct PiDDBCacheEntry {
+	LIST_ENTRY		List;
+	UNICODE_STRING	DriverName;
+	ULONG			TimeDateStamp;
+	NTSTATUS		LoadStatus;
+	char			_0x0028[16]; // data from the shim engine, or uninitialized memory for custom drivers
+}PIDCacheobj;
 
+extern "C" NTSYSAPI NTSTATUS NTAPI ObReferenceObjectByName(PUNICODE_STRING ObjectPath, ULONG Attributes, PACCESS_STATE PassedAccessState, ACCESS_MASK DesiredAccess, POBJECT_TYPE ObjectType, KPROCESSOR_MODE AccessMode, PVOID ParseContext, PVOID* ObjectPtr);
+extern "C" POBJECT_TYPE* IoDriverObjectType;
+extern "C" NTSYSAPI NTSTATUS NTAPI ZwQueryInformationThread(HANDLE ThreadHandle, THREADINFOCLASS ThreadInformationClass, PVOID ThreadInformation, ULONG ThreadInformationLength, PULONG ReturnLength);
+extern "C" NTSTATUS WINAPI ZwQuerySystemInformation(SYSTEM_INFORMATION_CLASS SystemInformationClass, PVOID SystemInformation, ULONG SystemInformationLength, PULONG ReturnLength);
+extern "C" NTSYSAPI PIMAGE_NT_HEADERS NTAPI RtlImageNtHeader(PVOID ModuleAddress);
+extern "C" NTSTATUS NTAPI MmCopyVirtualMemory(PEPROCESS SourceProcess, PVOID SourceAddress, PEPROCESS TargetProcess, PVOID TargetAddress, SIZE_T BufferSize, KPROCESSOR_MODE PreviousMode, PSIZE_T ReturnSize);
+extern "C" PVOID NTAPI PsGetProcessSectionBaseAddress(PEPROCESS Process);
+
+NTSTATUS KeReadProcessMemory(PEPROCESS Process, PVOID Address, PVOID BufferAddress, SIZE_T* Size);
+NTSTATUS KeWriteProcessMemory(PEPROCESS Process, PVOID Address, PVOID BufferAddress, SIZE_T* Size);
+LONG ClearPiDDBCacheTable();
+LONG ClearMmUnloadedDrivers(PUNICODE_STRING DriverName, BOOLEAN AccquireResource);
+NTSTATUS EnumKernelModules(PRTL_PROCESS_MODULES* Modules);
 LONG RetrieveMmUnloadedDriversData();
-BOOLEAN bDataCompare( const BYTE* pData, const BYTE* bMask, const char* szMask );
-PVOID ResolveRelativeAddress( PVOID Instruction, ULONG OffsetOffset, ULONG InstructionSize );
-PVOID NTAPI GetKernelProcAddress( LPCWSTR SystemRoutineName );
-UINT64 FindPattern( UINT64 dwAddress, UINT64 dwLen, BYTE *bMask, const char * szMask );
-ULONG64 GeModuleBase(const char* Findmodule);
+PVOID ResolveRelativeAddress(PVOID Instruction, ULONG OffsetOffset, ULONG InstructionSize);
+uintptr_t FindPattern(uintptr_t dwAddress, uintptr_t dwLen, BYTE* bMask, PCCH szMask);
+uintptr_t FindPatternInKernelSection(PCCH sectionName, uintptr_t modulePtr, BYTE* bMask, PCCH szMask);
+PIMAGE_SECTION_HEADER FindKernelSection(PCCH sectionName, uintptr_t imageBase);
+uintptr_t GetKernelProcAddress(PCWCH SystemRoutineName);
+uintptr_t GetKernelModuleAddress(PCCH moduleName);

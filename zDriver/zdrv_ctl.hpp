@@ -32,16 +32,13 @@ class ZDriver {
 
 public:
     static std::shared_ptr<ZDriver> GetInstance() {
-        ZDRV_TRACE_FUNC_ENTER(__FUNCTION__);
         static std::shared_ptr<ZDriver> instance;
         
         if (!instance && !(instance = std::make_shared<ZDriver>())) {
-            ZDRV_TRACE("Failed to create ZDriver instance");
             return {};
         }
 
         ZDRV_TRACE("ZDriver instance created (%p)", instance.get());
-        ZDRV_TRACE_FUNC_LEAVE(__FUNCTION__);
         return instance;
     }
 
@@ -49,7 +46,6 @@ public:
     bool SendIoctl(uint32_t code, IP& input, OP& output) {
         assert(mInitCalled && mInitOK);
         VMP_BEGIN_MUTATION("aLBHh5m10Hr52CFcxT4W2e3kMyUUp6Y32Bm8WLg84Gwb2bEa8655l5w566g66p47");
-        ZDRV_TRACE_FUNC_ENTER(__FUNCTION__);
 
         input.Filter      = ZDRV_FILTER_CODE;
         input.ControlCode = code;
@@ -65,20 +61,16 @@ public:
 
         if (!NT_SUCCESS(status)) {
 			ZDRV_TRACE("Driver Not Running (%08X)", status);
-            ZDRV_TRACE_FUNC_LEAVE(__FUNCTION__);
             return false;
         }
 
         if (isb.Information != sizeof(output)) {
-			ZDRV_TRACE("Invalid Output Buffer Size (%08X != %08X)", isb.Information, sizeof(output));
-            ZDRV_TRACE_FUNC_LEAVE(__FUNCTION__);
+			ZDRV_TRACE("Invalid Output Buffer Size (%p != %p)", (void*)isb.Information, (void*)sizeof(output));
             return false;
         }
 
         mLastDrvAPIError.QuadPart = isb.Status;
         mLastDrvError = output.DrvError;
-		ZDRV_TRACE("SendIoctl Success", mLastDrvAPIError.LowPart, mLastDrvError);
-        ZDRV_TRACE_FUNC_LEAVE(__FUNCTION__);
         VMP_END();
         return true;
     }
@@ -86,33 +78,140 @@ public:
     bool Verify() {
         assert(mInitCalled && !mConnected);
         VMP_BEGIN_ULTRA("tawGQ1aCYRPkuaUhvpD0G5ThOSR9vHeIY9WQHfnjnF8QUGOIjJLe5NTJsX8GfuLa");
-        ZDRV_TRACE_FUNC_ENTER(__FUNCTION__);
         OUTPUT_VERIFY_IOCTL_CALL ouput{};
         INPUT_VERIFY_IOCTL_CALL input{ .UserSignature = ZDRV_VERIFY_CLIENT_SIGNATURE };
 
         if (!SendIoctl(ZDRV_IOCTL_VERIFY, input, ouput)) {
-            ZDRV_TRACE_FUNC_LEAVE(__FUNCTION__);
             return false;
         }
 
         if (ouput.DrvSignature != ZDRV_VERIFY_DRIVER_SIGNATURE) {
-			ZDRV_TRACE("Invalid Driver Signature (%08X)", ouput.DrvSignature);
-            ZDRV_TRACE_FUNC_LEAVE(__FUNCTION__);
+			ZDRV_TRACE("Invalid Driver Signature (%p)", (void*)ouput.DrvSignature);
             return false;
         }
 
         mConnected = true;
         ZDRV_TRACE("Verify Success");
-        ZDRV_TRACE_FUNC_LEAVE(__FUNCTION__);
         VMP_END();
         return true;
     }
 
 public:
+    uintptr_t GetProcessPEB() {
+        assert(mInitCalled && mInitOK && mProcessID);
+        VMP_BEGIN_MUTATION("UQomHTOMG14iYuv91yId88nSla3jvKCneDa7ccZXgSxB95aU6wjrSYzENc3s4qTN");
+        OUTPUT_POINTER_IOCTL_CALL output{};
+        INPUT_PROCESS_IOCTL_CALL input{ .ProcessId = mProcessID };
+
+        if (!SendIoctl(ZDRV_IOCTL_GET_PROCESS_PEB, input, output)) {
+            ZDRV_TRACE("Failed to Get Process PEB");
+            return 0;
+        }
+
+        ZDRV_TRACE("GetProcessPEB Success");
+        VMP_END();
+        return output.Pointer;
+    }
+    uintptr_t GetProcessBase() {
+        assert(mInitCalled && mInitOK && mProcessID);
+        VMP_BEGIN_MUTATION("WPYt3o5ikRol1nA1mSy7BdZ2VUW99uMCf1eof8JwfKQ9GbjjSKBfSvr74s8u29FZ");
+        OUTPUT_POINTER_IOCTL_CALL output{};
+        INPUT_PROCESS_IOCTL_CALL input{ .ProcessId = mProcessID };
+
+        if (!SendIoctl(ZDRV_IOCTL_GET_PROCESS_BASE, input, output)) {
+            ZDRV_TRACE("Failed to Get Process Base");
+            return 0;
+        }
+
+        ZDRV_TRACE("GetProcessBase Success");
+        VMP_END();
+        return output.Pointer;
+    }
+    bool ReadProcessMemory(uint64_t address, void* buffer, size_t size) {
+        assert(mInitCalled && mInitOK && mProcessID);
+        VMP_BEGIN_MUTATION("aEGo0iDWdC3Xf1uecwdNfAnJtZCMsigeFYGaz1PcfWVWyPOy93yhbJf9tH2OqEyG");
+        OUTPUT_READWRITE_IOCTL_CALL output{};
+        INPUT_READWRITE_IOCTL_CALL input{};
+        input.ProcessId = mProcessID;
+        input.Address = address;
+        input.Buffer = (uint64_t)buffer;
+        input.Size = size;
+
+        if (!SendIoctl(ZDRV_IOCTL_READ_MEMORY, input, output)) {
+            ZDRV_TRACE("Failed to Read Process Memory");
+            return false;
+        }
+
+        if (output.rwBytes != size) {
+			ZDRV_TRACE("Failed to Read Process Memory");
+			return false;
+        }
+
+        ZDRV_TRACE("ReadProcessMemory Success");
+        VMP_END();
+        return true;
+    }
+    bool WriteProcessMemory(uint64_t address, void* buffer, size_t size) {
+        assert(mInitCalled && mInitOK && mProcessID);
+        VMP_BEGIN_MUTATION("44JHWrbK233n3AuHr9dKqlfj9MXKfHWVOwQymNPVurkBBMgViW4jVyYKkfHKgfzD");
+        OUTPUT_READWRITE_IOCTL_CALL output{};
+        INPUT_READWRITE_IOCTL_CALL input{};
+        input.ProcessId = mProcessID;
+        input.Address = address;
+        input.Buffer = (uint64_t)buffer;
+        input.Size = size;
+
+        if (!SendIoctl(ZDRV_IOCTL_WRITE_MEMORY, input, output)) {
+            ZDRV_TRACE("Failed to Write Process Memory");
+            return false;
+        }
+
+        if (output.rwBytes != size) {
+            ZDRV_TRACE("Failed to Write Process Memory");
+            return false;
+        }
+
+        ZDRV_TRACE("WriteProcessMemory Success");
+        VMP_END();
+        return true;
+    }
+    bool SuspendProcess() {
+        assert(mInitCalled && mInitOK && mProcessID);
+        VMP_BEGIN_MUTATION("ZlT730KL5Sb3VdYicklfj5Td5TZTkR19eYz7laHRgbgp6UUwhDH19oqAKusbdK7J");
+        OUTPUT_BASE_IOCTL_CALL output{};
+        INPUT_PROCESS_IOCTL_CALL input{ .ProcessId = mProcessID };
+
+        if (!SendIoctl(ZDRV_IOCTL_SUSPEND_PROCESS, input, output)) {
+            ZDRV_TRACE("Failed to Suspend Process");
+            return false;
+        }
+
+        ZDRV_TRACE("SuspendProcess Success");
+        VMP_END();
+        return true;
+    }
+    bool ResumeProcess() {
+        assert(mInitCalled && mInitOK && mProcessID);
+        VMP_BEGIN_MUTATION("zL8yZAmvPpqCm1lPKmbc0tebhEgKibAqTvMeslljGs6pIMBy1fqFIa8gy7N243hj");
+		OUTPUT_BASE_IOCTL_CALL output{};
+        INPUT_PROCESS_IOCTL_CALL input{ .ProcessId = mProcessID };
+
+        if (!SendIoctl(ZDRV_IOCTL_RESUME_PROCESS, input, output)) {
+			ZDRV_TRACE("Failed to Resume Process");
+            return false;
+        }
+
+		ZDRV_TRACE("ResumeProcess Success");
+        VMP_END();
+        return true;
+    }
+    inline void AttachProcess(uint64_t processId) {
+        mProcessID = processId;
+    }
+
     bool Initialize() {
         assert(!mInitCalled);
         VMP_BEGIN_ULTRA("677642STS0InOjYE46UtTR0wE0UtA01VpNxf40RWbutXxUkL0H10oer0563ert6R");
-        ZDRV_TRACE_FUNC_ENTER(__FUNCTION__);
 
         if (mInitCalled)
             return false;
@@ -126,13 +225,11 @@ public:
 #if (PHNT_VERSION >= PHNT_WIN7)
         if (!NT_SUCCESS(::RtlDosPathNameToNtPathName_U_WithStatus(VMP_STRW(L"\\\\.\\ACPI_ROOT_OBJECT"), &fileName, NULL, NULL))) {
             ZDRV_TRACE("Failed to open driver");
-            ZDRV_TRACE_FUNC_LEAVE(__FUNCTION__);
             return false;
         }
 #else
         if (!::RtlDosPathNameToNtPathName_U(VMP_STRW(L"\\\\.\\ACPI_ROOT_OBJECT"), &fileName, NULL, NULL)) {
             ZDRV_TRACE("Failed to open driver");
-            ZDRV_TRACE_FUNC_LEAVE(__FUNCTION__);
             return false;
         }
 #endif
@@ -142,7 +239,6 @@ public:
         if (!NT_SUCCESS(::NtCreateFile(&mDriverHandle, FILE_READ_ATTRIBUTES | GENERIC_READ | GENERIC_WRITE | SYNCHRONIZE, &objectAttributes, &isb, nullptr, FILE_ATTRIBUTE_NORMAL, FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, 0, nullptr, 0))) {
             ::RtlFreeUnicodeString(&fileName);
             ZDRV_TRACE("Failed to open driver (%08X)", isb.Status);
-            ZDRV_TRACE_FUNC_LEAVE(__FUNCTION__);
             return false;
         }
 
@@ -150,47 +246,9 @@ public:
         mInitOK = true;
 
         if (!Verify()) {
-            ZDRV_TRACE_FUNC_LEAVE(__FUNCTION__);
             return false;
         }
 
-        VMP_END();
-        ZDRV_TRACE_FUNC_LEAVE(__FUNCTION__);
-        return true;
-    }
-    bool SuspendProcess(uintptr_t pid) {
-        VMP_BEGIN_MUTATION("pOvx9GjnpD1OuN3AKapMyGbnx0mkHfCOJTVU5SYsH91xym2ZuPtZ2Lrx0wy27OiC");
-        ZDRV_TRACE_FUNC_ENTER(__FUNCTION__);
-        OUTPUT_BASE_IOCTL_CALL output{};
-        INPUT_PROCESS_IOCTL_CALL input{ .ProcessId = pid };
-        ZDRV_TRACE("Suspend Process (%08X)", pid);
-
-        if (!SendIoctl(ZDRV_IOCTL_SUSPEND_PROCESS, input, output)) {
-            ZDRV_TRACE("Failed to Suspend Process");
-            ZDRV_TRACE_FUNC_LEAVE(__FUNCTION__);
-            return false;
-        }
-
-        ZDRV_TRACE("SuspendProcess Success");
-        ZDRV_TRACE_FUNC_LEAVE(__FUNCTION__);
-        VMP_END();
-        return true;
-    }
-    bool ResumeProcess(uintptr_t pid) {
-        VMP_BEGIN_MUTATION("pOvx9GjnpD1OuN3AKapMyGbnx0mkHfCOJTVU5SYsH91xym2ZuPtZ2Lrx0wy27OiC");
-        ZDRV_TRACE_FUNC_ENTER(__FUNCTION__);
-		OUTPUT_BASE_IOCTL_CALL output{};
-        INPUT_PROCESS_IOCTL_CALL input{ .ProcessId = pid };
-        ZDRV_TRACE("Resume Process (%08X)", pid);
-
-        if (!SendIoctl(ZDRV_IOCTL_RESUME_PROCESS, input, output)) {
-			ZDRV_TRACE("Failed to Resume Process");
-            ZDRV_TRACE_FUNC_LEAVE(__FUNCTION__);
-            return false;
-        }
-
-		ZDRV_TRACE("ResumeProcess Success");
-        ZDRV_TRACE_FUNC_LEAVE(__FUNCTION__);
         VMP_END();
         return true;
     }
@@ -198,11 +256,12 @@ public:
 public:
     ZDriver() : mInitCalled(), mInitOK(), mConnected(),
         mLastDrvAPIError(), mLastDrvError(), mLastError(),
-        mDriverHandle() {}
+        mDriverHandle(), mProcessID() {}
     ~ZDriver() {}
 
 private:
     bool mInitCalled, mInitOK, mConnected;
+    uint64_t mProcessID;
     HANDLE mDriverHandle;
     LARGE_INTEGER mLastError, mLastDrvAPIError;
     ZDRV_ERROR mLastDrvError;

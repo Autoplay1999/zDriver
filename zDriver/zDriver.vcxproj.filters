@@ -44,6 +44,9 @@
     <ClInclude Include="zdrv.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ldisasm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="DispatchHook.asm" />
