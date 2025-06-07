@@ -42,9 +42,15 @@ extern "C" PPEB NTAPI PsGetProcessPeb(PEPROCESS Process);
 #else
 #	define DEBUG(fmt, ...)
 #endif
+#ifdef __VERBOSE
 #define TRACE(fmt, ...)	DbgPrintEx( DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "[ZDriver.Driver] " fmt "\n", __VA_ARGS__ )
 #define TRACE_BEGIN(name) TRACE("[ " name " ]")
 #define TRACE_END() TRACE("[ END ]")
+#else
+#define TRACE(fmt, ...)
+#define TRACE_BEGIN(name)
+#define TRACE_END()
+#endif
 
 #define BLOCK_BEGIN() while (true) {
 #define BLOCK_BEGIN_(x) while (x) {

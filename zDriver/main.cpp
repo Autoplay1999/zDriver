@@ -248,10 +248,18 @@ NTSTATUS DriverEntry(_In_  struct _DRIVER_OBJECT* DriverObject, _In_  PUNICODE_S
         uintptr_t DispatchHookAddr = (uintptr_t)DispatchHook;
         *(uintptr_t*)(DispatchHookAddr + 0x6) = (uintptr_t)CustomDispatch;
         //uintptr_t TraceMessageHookInst = FindPatternInKernelSection(".TEXT", (uintptr_t)ACPIDriverObject->DriverStart, (BYTE*)"\x48\x8D\x45\x4F\x4C\x89\x00\x24\x28\x48\x89\x00\x24\x20", "xxxxxx?xxxx?xx"); // 48 8D 45 4F 4C 89 ?? 24 28 48 89 ?? 24 20
-        uintptr_t TraceMessageHookInst = FindPatternInKernelSection(".TEXT", (uintptr_t)ACPIDriverObject->DriverStart, (BYTE*)"\x48\x8B\x05\x00\x00\x00\x00\xFF\x15\x00\x00\x00\x00\x41\xB9\x05\x00\x00\x00", "xxx????xx????xxxxxx"); // 48 8B 05 ?? ?? ?? ?? FF 15 ?? ?? ?? ?? 41 B9 05 00 00 00
+        auto TraceMessageHookInst = FindPatternInKernelSection(".TEXT", (uintptr_t)ACPIDriverObject->DriverStart, (BYTE*)"\x48\x8B\x05\x00\x00\x00\x00\xFF\x15\x00\x00\x00\x00\x41\xB9\x05\x00\x00\x00", "xxx????xx????xxxxxx");    // 48 8B 05 ?? ?? ?? ?? FF 15 ?? ?? ?? ?? 41 B9 05 00 00 00
 
         if (!TraceMessageHookInst) {
-            TraceMessageHookInst = FindPatternInKernelSection(".TEXT", (uintptr_t)ACPIDriverObject->DriverStart, (BYTE*)"\x48\x8B\x05\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x90\x41\xB9\x05\x00\x00\x00", "xxx????x????xxxxxxx"); // 48 8B 05 ?? ?? ?? ?? E8 ?? ?? ?? ?? 90 41 B9 05 00 00 00
+            TraceMessageHookInst = FindPatternInKernelSection(".TEXT", (uintptr_t)ACPIDriverObject->DriverStart, (BYTE*)"\x48\x8B\x05\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x90\x41\xB9\x05\x00\x00\x00", "xxx????x????xxxxxxx");     // 48 8B 05 ?? ?? ?? ?? E8 ?? ?? ?? ?? 90 41 B9 05 00 00 00
+        }
+
+        if (!TraceMessageHookInst) {
+            TraceMessageHookInst = FindPatternInKernelSection(".TEXT", (uintptr_t)ACPIDriverObject->DriverStart, (BYTE*)"\x48\x8B\x05\x00\x00\x00\x00\xFF\x15\x00\x00\x00\x00\xB9\x05\x00\x00\x00", "xxx????xx????xxxxx");          // 48 8B 05 ?? ?? ?? ?? FF 15 ?? ?? ?? ?? B9 05 00 00 00 (Win11 23H2 22631.5335)
+        }
+
+        if (!TraceMessageHookInst) {
+            TraceMessageHookInst = FindPatternInKernelSection(".TEXT", (uintptr_t)ACPIDriverObject->DriverStart, (BYTE*)"\x48\x8B\x05\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x90\xB9\x05\x00\x00\x00", "xxx????x????xxxxxx");          // 48 8B 05 ?? ?? ?? ?? E8 ?? ?? ?? ?? 90 B9 05 00 00 00 (Win11 23H2 22631.5335)
         }
 
         if (TraceMessageHookInst) {
