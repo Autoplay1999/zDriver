@@ -175,6 +175,28 @@ public:
         VMP_END();
         return true;
     }
+    bool ProtectVirtualMemory(uint64_t& address, size_t& size, uint64_t protection, uint64_t& oldProtection) {
+        assert(mInitCalled && mInitOK && mProcessID);
+        VMP_BEGIN_MUTATION("mTbXsoJ5iPu3RhqVhRauVYZm0zmOgJlJXVE5psdQPeBTvVsEWFlR2wVFRKO7IiO8");
+        OUTPUT_PROTECT_MEMORY_IOCTL_CALL output{};
+        INPUT_PROTECT_MEMORY_IOCTL_CALL input{};
+        input.ProcessId = mProcessID;
+        input.Address = address;
+        input.Size = size;
+        input.NewProtection = protection;
+        
+        if (!SendIoctl(ZDRV_IOCTL_PROTECT_MEMORY, input, output)) {
+            ZDRV_TRACE("Failed to Protect Virtual Memory");
+            return false;
+        }
+
+		address = output.BaseAddress;
+		size = output.Size;
+		oldProtection = output.OldProtection;
+        ZDRV_TRACE("ProtectVirtualMemory Success");
+        VMP_END();
+        return true;
+    }
     bool SuspendProcess() {
         assert(mInitCalled && mInitOK && mProcessID);
         VMP_BEGIN_MUTATION("ZlT730KL5Sb3VdYicklfj5Td5TZTkR19eYz7laHRgbgp6UUwhDH19oqAKusbdK7J");

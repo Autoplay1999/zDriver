@@ -59,7 +59,7 @@
       <SDLCheck>false</SDLCheck>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <LanguageStandard_C>stdclatest</LanguageStandard_C>
-      <PreprocessorDefinitions>__DEBUG;_WIN64;_AMD64_;AMD64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN64;_AMD64_;AMD64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <LargeAddressAware>true</LargeAddressAware>

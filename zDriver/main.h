@@ -36,6 +36,7 @@ extern "C" DRIVER_INITIALIZE DriverEntry;
 extern "C" NTSTATUS NTAPI PsSuspendProcess(PEPROCESS Process);
 extern "C" NTSTATUS NTAPI PsResumeProcess(PEPROCESS Process);
 extern "C" PPEB NTAPI PsGetProcessPeb(PEPROCESS Process);
+extern "C" NTSTATUS NTAPI ZwProtectVirtualMemory(IN HANDLE ProcessHandle, IN OUT PVOID* BaseAddress, IN OUT SIZE_T* NumberOfBytesToProtect, IN ULONG NewAccessProtection, OUT PULONG OldAccessProtection);
 
 #ifdef __DEBUG
 #	define DEBUG(fmt, ...)	DbgPrintEx( DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "[ZDriver.Driver] " fmt "\n", __VA_ARGS__ )

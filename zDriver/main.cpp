@@ -160,6 +160,48 @@ NTSTATUS CustomDispatch(PDEVICE_OBJECT device, PIRP irp) {
         TRACE_END();
         break;
     }
+    case ZDRV_IOCTL_PROTECT_MEMORY:
+    {
+        TRACE_BEGIN("ZDRV_IOCTL_PROTECT_MEMORY");
+        auto inUserBuffer = (INPUT_PROTECT_MEMORY_IOCTL_CALL*)irp->AssociatedIrp.SystemBuffer;
+        auto outUserBuffer = (OUTPUT_PROTECT_MEMORY_IOCTL_CALL*)irp->AssociatedIrp.SystemBuffer;
+
+        DEBUG("ProcessId     : %p", inUserBuffer->ProcessId);
+        DEBUG("Address       : %p", inUserBuffer->Address);
+        DEBUG("Size          : %p", inUserBuffer->Size);
+        DEBUG("NewProtection : %p", inUserBuffer->NewProtection);
+
+        PEPROCESS targetProcess = 0;
+        status = PsLookupProcessByProcessId((HANDLE)inUserBuffer->ProcessId, &targetProcess);
+
+        if (NT_SUCCESS(status)) {
+            KAPC_STATE apcState;
+            ULONG oldProtection;
+            void* Address = (void*)inUserBuffer->Address;
+            SIZE_T rwSize = inUserBuffer->Size;
+
+            KeStackAttachProcess(targetProcess, &apcState);
+            status = ZwProtectVirtualMemory(ZwCurrentProcess(), &Address, &rwSize, inUserBuffer->NewProtection, &oldProtection);
+            KeUnstackDetachProcess(&apcState);
+
+            if (!NT_SUCCESS(status)) {
+                outUserBuffer->DrvError = ZDRV_ERROR::KeProtectVirtualMemory_Failed;
+            }
+            
+            outUserBuffer->BaseAddress = (uint64_t)Address;
+            outUserBuffer->Size = rwSize;
+            outUserBuffer->OldProtection = oldProtection;
+            DEBUG("ZwProtectVirtualMemory: %p, BaseAddress: %p, Size: %p, OldProtection: %p", status, Address, rwSize, oldProtection);
+            ObfDereferenceObject(targetProcess);
+        } else {
+            TRACE("PsLookupProcessByProcessId Failed");
+            outUserBuffer->DrvError = ZDRV_ERROR::PsLookupProcessByProcessId_Failed;
+        }
+
+        bytesIO = sizeof(OUTPUT_PROTECT_MEMORY_IOCTL_CALL);
+        TRACE_END();
+        break;
+    }
     case ZDRV_IOCTL_SUSPEND_PROCESS: {
         TRACE_BEGIN("ZDRV_IOCTL_SUSPEND_PROCESS");
         auto inUserBuffer = (INPUT_PROCESS_IOCTL_CALL*)irp->AssociatedIrp.SystemBuffer;
@@ -271,8 +313,9 @@ NTSTATUS DriverEntry(_In_  struct _DRIVER_OBJECT* DriverObject, _In_  PUNICODE_S
                 *(uintptr_t*)(pfnWppTraceMessagePtr) = DispatchHookAddr;
                 ACPIDriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = (PDRIVER_DISPATCH)TraceMessageHookInst;
             }
-        } else
+        } else {
             TRACE("Failed to find WPP TraceMessage hook instruction.");
+        }
 
         ObfDereferenceObject(ACPIDriverObject);
     }
